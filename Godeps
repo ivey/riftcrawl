@@ -1,1 +1,3 @@
 gopkg.in/check.v1
+github.com/nsf/termbox-go
+github.com/davecgh/go-spew/spew
