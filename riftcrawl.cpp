@@ -2,75 +2,83 @@
 #include <cstdio>
 #include <string>
 
+// debug routines - remove/ifdef out
+void status(std::string s) {
+  rlutil::setColor(15);
+  rlutil::locate(1,16);
+  std::cout << s << "       ";
+}
+
+void info(std::string s) {
+  rlutil::setColor(14);
+  rlutil::locate(1,17);
+  std::cout << s << "       ";
+}
+
+void debug(std::string s) {
+  rlutil::setColor(12);
+  rlutil::locate(1,18);
+  std::cout << s << "       ";
+}
+
+
 // map defs
 #define MAP_WIDTH 20
 #define MAP_HEIGHT 15
 
 // tile defs
 #define PLAYER "@"
-#define TILE_FLOOR 0
-#define TILE_WALL 1
 
+struct TILE {
+  char    character;  // ASCII character for this tile type
+  short   color;      // rlutil Color code for this tile type
+  bool    passable;   // Set to true if you can walk on this tile
+};
 
-void status(std::string s) {
-  rlutil::locate(1,16);
-  std::cout << s << "       ";
-}
-
-void info(std::string s) {
-  rlutil::locate(1,17);
-  std::cout << s << "       ";
-}
-
-void debug(std::string s) {
-  rlutil::locate(1,18);
-  std::cout << s << "       ";
-}
-
+TILE tiles[] = {
+  { '.', 10, true },    // 0 grass
+  { '.', 6,  true },    // 1 dirt
+  { '#', 8,  false },   // 2 wall
+  { '~', 9,  true },    // 3 water
+};
 
 
 // player location
-int px=1, py=1;
+int px=1, py=MAP_HEIGHT;
 
 // the map
 int map[MAP_HEIGHT][MAP_WIDTH] = {
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-    { 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-    { 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0 },
-    { 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
+    { 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1 },
+    { 1, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1 },
+    { 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 3, 0, 0, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1 },
+    { 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 1 },
+    { 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 1 },
+    { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 1 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
 };
 
 void drawmap(void) {
   for( int y = 0; y < MAP_HEIGHT; y++ ) {
-    rlutil::locate(1,y+1); // draw new line - locate is 1 based
     for( int x = 0; x < MAP_WIDTH; x++ ) {
-      switch (map[y][x]) {
-      case TILE_FLOOR:
-        rlutil::setColor(7);
-        std::cout << ".";
-        break;
-      case TILE_WALL:
-        rlutil::setColor(8);
-        std::cout << "#";
-        break;
-      }
+      rlutil::locate(x+1,y+1); // locate is 1 based
+      int t = map[y][x];
+      rlutil::setColor(tiles[t].color);
+      std::cout << tiles[t].character;
     }
   }
 }
 
 void drawplayer(void) {
   rlutil::locate(px,py);
+  rlutil::setColor(9);
   std::cout << PLAYER;
 }
 
@@ -79,11 +87,7 @@ bool movablep(int mx, int my) {
     return false;
   }
   int v = map[my-1][mx-1];
-  if (v == TILE_FLOOR) {
-    return true;
-  }
-
-  return false;
+  return tiles[v].passable;
 }
 
 int main( void ) {
@@ -92,6 +96,7 @@ int main( void ) {
 
   drawmap();
   drawplayer();
+  fflush(stdout);
 
   while (true) {
     if (kbhit()) {
@@ -101,26 +106,25 @@ int main( void ) {
       sprintf(s, "Key pressed: %d", k);
       info(s);
 
+      int dx = 0;
+      int dy = 0;
+
       switch (k) {
+      case 104: // h
       case rlutil::KEY_LEFT:
-        if (movablep(px-1, py)) {
-          px--;
-        }
+        dx = -1;
         break;
+      case 108: // l
       case rlutil::KEY_RIGHT:
-        if (movablep(px+1, py)) {
-          px++;
-        }
+        dx = 1;
         break;
+      case 107: // k
       case rlutil::KEY_UP:
-        if (movablep(px, py-1)) {
-          py--;
-        }
+        dy = -1;
         break;
+      case 106: // j
       case rlutil::KEY_DOWN:
-        if (movablep(px, py+1)) {
-          py++;
-        }
+        dy = 1;
         break;
       case 113: // q
       case rlutil::KEY_ESCAPE:
@@ -128,6 +132,11 @@ int main( void ) {
         return 0;
       default:
         break;
+      }
+
+      if (movablep(px + dx, py + dy)) {
+        px += dx;
+        py += dy;
       }
 
       char ds [100];
