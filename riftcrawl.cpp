@@ -1,53 +1,20 @@
 #include "rlutil.h"
+#include "tiles.h"
+#include "items.h"
+#include "debug.h"
+#include "engine.h"
+#include "items.h"
+#include "tiles.h"
+#include "cmds.h"
 #include <cstdio>
 #include <string>
 
-// debug routines - remove/ifdef out
-void status(std::string s) {
-  rlutil::setColor(15);
-  rlutil::locate(1,16);
-  std::cout << s << "       ";
-}
-
-void info(std::string s) {
-  rlutil::setColor(14);
-  rlutil::locate(1,17);
-  std::cout << s << "       ";
-}
-
-void debug(std::string s) {
-  rlutil::setColor(12);
-  rlutil::locate(1,18);
-  std::cout << s << "       ";
-}
-
-
-// map defs
-#define MAP_WIDTH 20
-#define MAP_HEIGHT 15
-
-// tile defs
-#define PLAYER "@"
-
-struct TILE {
-  char    character;  // ASCII character for this tile type
-  short   color;      // rlutil Color code for this tile type
-  bool    passable;   // Set to true if you can walk on this tile
-};
-
-TILE tiles[] = {
-  { '.', 10, true },    // 0 grass
-  { '.', 6,  true },    // 1 dirt
-  { '#', 8,  false },   // 2 wall
-  { '~', 9,  true },    // 3 water
-};
-
-
 // player location
-int px=1, py=MAP_HEIGHT;
+int px=1, py=MAP_HEIGHT; // start at bottom corner
+int inventory[6] = {0,0,0,0,0,0};
 
 // the map
-int map[MAP_HEIGHT][MAP_WIDTH] = {
+int map_tiles[MAP_HEIGHT][MAP_WIDTH] = {
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
     { 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
     { 1, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1 },
@@ -65,13 +32,26 @@ int map[MAP_HEIGHT][MAP_WIDTH] = {
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
 };
 
+int map_items[MAP_HEIGHT][MAP_WIDTH];
+
+
 void drawmap(void) {
   for( int y = 0; y < MAP_HEIGHT; y++ ) {
     for( int x = 0; x < MAP_WIDTH; x++ ) {
+      int clr;
+      char chr;
       rlutil::locate(x+1,y+1); // locate is 1 based
-      int t = map[y][x];
-      rlutil::setColor(tiles[t].color);
-      std::cout << tiles[t].character;
+      if(map_items[y][x] != ITEM_NONE) {
+        int t = map_items[y][x];
+        clr = items[t].color;
+        chr = items[t].character;
+      } else {
+        int t = map_tiles[y][x];
+        clr = tiles[t].color;
+        chr = tiles[t].character;
+      }
+      rlutil::setColor(clr);
+      std::cout << chr;
     }
   }
 }
@@ -82,17 +62,58 @@ void drawplayer(void) {
   std::cout << PLAYER;
 }
 
+void drawinv(void) {
+  rlutil::locate(MAP_WIDTH+2, 1);
+  std::cout << "Inventory";
+  rlutil::locate(MAP_WIDTH+2, 2);
+  std::cout << "---------";
+  for( int i = 0; i < 6; i++ ) {
+    int it = inventory[i];
+    rlutil::locate(MAP_WIDTH+2, 3+i);
+    std::cout << i << ": " << items[it].name;
+  }
+}
+
 bool movablep(int mx, int my) {
   if (mx < 1 || mx > MAP_WIDTH || my < 1 || my > MAP_HEIGHT) {
     return false;
   }
-  int v = map[my-1][mx-1];
+  int v = map_tiles[my-1][mx-1];
   return tiles[v].passable;
 }
+
+void inititems(void) {
+  memset( map_items, 0, sizeof(items) );
+  map_items[5][5] = ITEM_POTION;
+  map_items[12][14] = ITEM_DORAN_BLADE;
+}
+
+
+// cmds.cpp ?
+
+void cmdget(void) {
+  if(map_items[py-1][px-1] == ITEM_NONE) {
+    status("You're not on an item!");
+    return;
+  }
+  for( int i = 0; i < 6; i++ ) {
+    if(inventory[i] == ITEM_NONE) {
+      inventory[i] = map_items[py-1][px-1];
+      map_items[py-1][px-1] = ITEM_NONE;
+      return;
+    }
+  }
+  status("You don't have any free inventory slots.");
+  return;
+}
+
+// cmds
 
 int main( void ) {
   rlutil::cls();
   rlutil::CursorHider curs;
+
+  inititems();
 
   drawmap();
   drawplayer();
@@ -100,6 +121,7 @@ int main( void ) {
 
   while (true) {
     if (kbhit()) {
+      status("                              ");
 
       int k = rlutil::getkey();
       char s [100];
@@ -130,6 +152,9 @@ int main( void ) {
       case rlutil::KEY_ESCAPE:
         rlutil::cls();
         return 0;
+      case 103: // g
+        cmdget();
+        break;
       default:
         break;
       }
@@ -145,6 +170,7 @@ int main( void ) {
 
       drawmap();
       drawplayer();
+      drawinv();
       fflush(stdout);
     }
   }
