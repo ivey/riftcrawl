@@ -5,7 +5,6 @@
 #include "engine.h"
 #include "items.h"
 #include "tiles.h"
-#include "cmds.h"
 #include <cstdio>
 #include <string>
 
@@ -70,7 +69,7 @@ void drawinv(void) {
   for( int i = 0; i < 6; i++ ) {
     int it = inventory[i];
     rlutil::locate(MAP_WIDTH+2, 3+i);
-    std::cout << i << ": " << items[it].name;
+    std::cout << i+1 << ": " << items[it].name << "          ";
   }
 }
 
@@ -107,6 +106,28 @@ void cmdget(void) {
   return;
 }
 
+void cmdsell(void) {
+  status("Sell which item? [1-6]");
+  int slot = getch();
+  slot = slot - 49;
+  char s [100];
+  if(slot < 0 || slot > 5) {
+    status("Invalid slot");
+    return;
+  }
+  int item = inventory[slot];
+  if(item == ITEM_NONE) {
+    sprintf(s, "No item in slot %d", slot+1);
+    status(s);
+    return;
+  }
+  sprintf(s, "Selling %s", items[item].name);
+  status(s);
+  // TODO: credit gold
+  inventory[slot] = ITEM_NONE;
+  return;
+}
+
 // cmds
 
 int main( void ) {
@@ -121,7 +142,7 @@ int main( void ) {
 
   while (true) {
     if (kbhit()) {
-      status("                              ");
+      status("");
 
       int k = rlutil::getkey();
       char s [100];
@@ -154,6 +175,9 @@ int main( void ) {
         return 0;
       case 103: // g
         cmdget();
+        break;
+      case 115: // s
+        cmdsell();
         break;
       default:
         break;
