@@ -1,12 +1,21 @@
 CXX=g++
-CFLAGS=-I. -Wall -Wextra
+CC_FLAGS=-I. -Wall -Wextra -MMD
+LD_FLAGS=
+
+CPP_FILES := $(wildcard *.cpp)
+OBJ_FILES := $(CPP_FILES:.cpp=.o)
 
 all: riftcrawl
 
-riftcrawl: rlutil.h riftcrawl.cpp
-	$(CXX) $(CFLAGS) -o riftcrawl riftcrawl.cpp
+riftcrawl: $(OBJ_FILES)
+	$(CXX) $(LD_FLAGS) -o $@ $^
+
+%.o: %.cpp
+	g++ $(CC_FLAGS) -c -o $@ $<
 
 .PHONY: clean
 
 clean:
-	rm riftcrawl
+	rm riftcrawl $(OBJ_FILES) $(wildcard *.d)
+
+-include $(OBJ_FILES:.o=.d)
